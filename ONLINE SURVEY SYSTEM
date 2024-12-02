@@ -1,0 +1,260 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+public class OnlineSurveySystem extends Frame implements ActionListener {
+    // Components for Login
+    TextField tfUsername, tfPassword;
+    Button btnLogin;
+
+    // Components for Survey Form (User Side)
+    TextField tfResponse;
+    Button btnSubmit, btnLogout;
+
+    // Components for Admin Panel
+    TextField tfQuestion;
+    Button btnAddQuestion, btnClearQuestions, btnViewResponses, btnLogoutAdmin;
+
+    // Storage for Survey Questions and Responses
+    ArrayList<String> questions = new ArrayList<>();
+    HashMap<String, HashMap<String, String>> responses = new HashMap<>();
+    String currentUser;
+    int currentQuestionIndex = 0;
+
+    // Constructor
+    public OnlineSurveySystem() {
+        setupLoginScreen();
+        setSize(300, 200);
+        setTitle("Login Screen");
+        setVisible(true);
+
+        // Close window action
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent we) {
+                System.exit(0);
+            }
+        });
+    }
+
+    private void setupLoginScreen() {
+        removeAll();
+        setLayout(new FlowLayout());
+
+        Label lblUsername = new Label("Username:");
+        tfUsername = new TextField(20);
+
+        Label lblPassword = new Label("Password:");
+        tfPassword = new TextField(20);
+        tfPassword.setEchoChar('*');
+
+        btnLogin = new Button("Login");
+        btnLogin.addActionListener(this);
+
+        add(lblUsername);
+        add(tfUsername);
+        add(lblPassword);
+        add(tfPassword);
+        add(btnLogin);
+
+        setVisible(true);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getSource() == btnLogin) {
+            String username = tfUsername.getText();
+            String password = tfPassword.getText();
+
+            if (username.equals("SHREE") && password.equals("123")) {
+                openAdminPanel();
+            } else if ((username.equals("HARSHINI") || username.equals("HARINI") ||
+                    username.equals("HARIPRIYA") || username.equals("DHIVYA")) && password.equals("123")) {
+                currentUser = username;
+                openSurveyForm();
+            } else {
+                showMessage("Invalid Login! Try again.");
+            }
+        } else if (e.getSource() == btnSubmit) {
+            String response = tfResponse.getText();
+
+            if (response.isEmpty()) {
+                showMessage("Please provide a response.");
+                return;
+            }
+
+            // Save response for the current user and question
+            responses.computeIfAbsent(currentUser, k -> new HashMap<>())
+                    .put(questions.get(currentQuestionIndex), response);
+
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.size()) {
+                showSurveyQuestion();
+            } else {
+                showMessage("Thank you for completing the survey!");
+                resetSurvey();
+                setupLoginScreen(); // Go back to login screen after submission
+            }
+        } else if (e.getSource() == btnLogout) {
+            resetSurvey();
+            setupLoginScreen(); // Go back to login screen
+        } else if (e.getSource() == btnAddQuestion) {
+            String question = tfQuestion.getText();
+            if (!question.isEmpty()) {
+                questions.add(question);
+                showMessage("Question added successfully!");
+                tfQuestion.setText(""); // Clear input
+            } else {
+                showMessage("Question field cannot be empty.");
+            }
+        } else if (e.getSource() == btnClearQuestions) {
+            questions.clear();
+            showMessage("All questions have been cleared.");
+        } else if (e.getSource() == btnViewResponses) {
+            showResponses();
+        } else if (e.getSource() == btnLogoutAdmin) {
+            setupLoginScreen(); // Go back to login screen
+        }
+    }
+
+    private void openSurveyForm() {
+        if (questions.isEmpty()) {
+            showMessage("No survey available at the moment. Please try again later.");
+            return;
+        }
+
+        currentQuestionIndex = 0;
+        showSurveyQuestion();
+    }
+
+    private void showSurveyQuestion() {
+        removeAll();
+        setLayout(new FlowLayout());
+
+        Label lblQuestion = new Label(questions.get(currentQuestionIndex));
+        tfResponse = new TextField(30);
+        btnSubmit = new Button("Submit");
+        btnSubmit.addActionListener(this);
+
+        add(lblQuestion);
+        add(tfResponse);
+        add(btnSubmit);
+
+        btnLogout = new Button("Logout");
+        btnLogout.addActionListener(this);
+        add(btnLogout);
+
+        setSize(400, 250);
+        setTitle("Survey Form");
+        setVisible(true);
+    }
+
+    private void openAdminPanel() {
+        removeAll();
+        setLayout(new FlowLayout());
+
+        Label lblQuestion = new Label("Add Survey Questions:");
+        tfQuestion = new TextField(30);
+
+        btnAddQuestion = new Button("Add Question");
+        btnAddQuestion.addActionListener(this);
+
+        btnClearQuestions = new Button("Clear Survey");
+        btnClearQuestions.addActionListener(this);
+
+        btnViewResponses = new Button("View Responses");
+        btnViewResponses.addActionListener(this);
+
+        btnLogoutAdmin = new Button("Logout");
+        btnLogoutAdmin.addActionListener(this);
+
+        add(lblQuestion);
+        add(tfQuestion);
+        add(btnAddQuestion);
+        add(btnClearQuestions);
+        add(btnViewResponses);
+        add(btnLogoutAdmin);
+
+        setSize(500, 300);
+        setTitle("Admin Panel");
+        setVisible(true);
+    }
+
+    private void showResponses() {
+        removeAll();
+        setLayout(new FlowLayout());
+
+        if (responses.isEmpty()) {
+            showMessage("No responses available.");
+            return;
+        }
+
+        Label lblResponses = new Label("Survey Responses:");
+        TextArea taResponses = new TextArea(15, 50);
+
+        for (String question : questions) {
+            int yesCount = 0, noCount = 0;
+            boolean isYesNoQuestion = false;
+
+            taResponses.append("Question: " + question + "\n");
+
+            for (String respondent : responses.keySet()) {
+                HashMap<String, String> userResponse = responses.get(respondent);
+                String answer = userResponse.get(question);
+
+                // Count Yes/No for Yes/No questions
+                if ("Yes".equalsIgnoreCase(answer)) {
+                    yesCount++;
+                    isYesNoQuestion = true;
+                } else if ("No".equalsIgnoreCase(answer)) {
+                    noCount++;
+                    isYesNoQuestion = true;
+                }
+
+                // Append respondent name and their response
+                if (answer != null) {
+                    taResponses.append("  " + respondent + ": " + answer + "\n");
+                }
+            }
+
+            // Show counts for Yes/No questions
+            if (isYesNoQuestion) {
+                taResponses.append("Summary: Yes = " + yesCount + ", No = " + noCount + "\n");
+            }
+
+            taResponses.append("\n");
+        }
+
+        add(lblResponses);
+        add(taResponses);
+
+        Button btnBack = new Button("Back");
+        btnBack.addActionListener(ae -> openAdminPanel());
+        add(btnBack);
+
+        setSize(600, 500);
+        setTitle("Survey Responses");
+        setVisible(true);
+    }
+
+    private void resetSurvey() {
+        currentQuestionIndex = 0;
+    }
+
+    private void showMessage(String message) {
+        Dialog dialog = new Dialog(this, "Message", true);
+        dialog.setLayout(new FlowLayout());
+        Label lblMessage = new Label(message);
+        Button btnOk = new Button("OK");
+        btnOk.addActionListener(ae -> dialog.setVisible(false));
+        dialog.add(lblMessage);
+        dialog.add(btnOk);
+        dialog.setSize(300, 150);
+        dialog.setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        new OnlineSurveySystem();
+}
+}
+
